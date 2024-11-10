@@ -4,6 +4,7 @@ class: center, middle
 # The Currents of Concurrency
 ## Reasoning with Async Rust
 ## Zainab Ali
+https://zainab-ali.github.io/reasoning-with-async-rust
 
 ???
 
@@ -81,6 +82,11 @@ NOTE: Miss out paradigms are another axis, Each language has differnt constraint
 
 ---
 class: center, middle
+# Concepts
+<img src="images/three-concepts.png" width="400">
+
+---
+class: center, middle
 
 # An example: this slideshow
 
@@ -107,9 +113,11 @@ Concurrency implies independence.
 NOTE: We want to define dependencies, we don't really govern execution.
 
 ---
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph.
+ - Start the slideshow graph.
+ - Start an arbitrary graph.
  - Model the graph as data.
  - View units of work as data.
  - How to share state.
@@ -119,7 +127,7 @@ NOTE: We want to define dependencies, we don't really govern execution.
 
 We're going to model a fixed set of units - we're going to hardcode the graph I've shown you.
 
-We're then going to model a dynamic graph.
+We're then going to model a general graph.
 
 Finally, we share state, and how not to.
 
@@ -145,6 +153,20 @@ fn start(name: String) {
 }
 ```
 
+???
+
+That's all a bit abstract, so to get down to concretes, let's first look at this problem in standard Rust.
+We're not using any async programming here.
+
+ - We have a main program which starts login, then browser, then my webserver, and then finally my slideshow.
+ - We've mocked their startup. To remove some of the complexity. We're just going to print to the console before and after they've started, and we're mocking their startup by sleeping.
+ 
+NOTE: I've simplified the code to remove clone calls.
+ 
+---
+class: output
+## The output
+
 ```sh
 Starting login
 Running login
@@ -158,18 +180,13 @@ Running slideshow
 
 ???
 
-That's all a bit abstract, so to get down to concretes, let's first look at this problem in standard Rust.
-We're not using any async programming here.
-
- - We have a main program which starts login, then browser, then my webserver, and then finally my slideshow.
- - We've mocked their startup. To remove some of the complexity. We're just going to print to the console before and after they've started, and we're mocking their startup by sleeping.
- 
 If we run this, we get this output. Note that it's sequential, if I were to demo this, you'd see that there was a one second delay between the starting and the started.
 
 
-NOTE: I've simplified the code to remove clone calls.
 
 ---
+
+class: async
 
 # Async
 
@@ -191,17 +208,6 @@ async fn start(name: String) {
 }
 ```
 
-```sh
-Starting login
-Running login
-Starting browser
-Running browser
-Starting webserver
-Running webserver
-Starting slideshow
-Running slideshow
-```
-
 ???
 
 That's the sequential code. What about async?
@@ -215,6 +221,24 @@ We've also written this extra await after each call to start.
 And we've replaced our sleep with Delay, from futures_timer.
 
 And we have this async_std main macro. Which we're going to ignore for the moment.
+
+---
+class: output
+
+# The output
+
+```sh
+Starting login
+Running login
+Starting browser
+Running browser
+Starting webserver
+Running webserver
+Starting slideshow
+Running slideshow
+```
+
+???
 
 And you might think that with this async / await syntax, we'd have different output.
 
@@ -231,7 +255,7 @@ You can think of the async keyword as introducing the idea of units of work.
 await as defining a sequential dependency between these units.
 
 ---
-
+class: join
 # join!
 
 ```rust
@@ -257,6 +281,7 @@ join is arguably more important than async and await here. Because it lets us ex
 If we join these two units, they can happen in any order. 
 
 ---
+class: concurrency-join
 
 # Concurrency
 
@@ -286,13 +311,10 @@ So here's how we incorporate join. We can express both sequential and concurrent
 If you look at the output now, we start both the browser and webserver at the same time.
 
 ---
-class: middle
+class: center, middle
+# Concepts
 
-# Async Rust ...
- - Lets us express units of work.
- - `async` defines a unit. 
- - `await` to describe sequential dependencies.
- - `join!` to describe concurrency.
+<img src="images/three-concepts-composition.png" width="400">
 
 ???
 
@@ -318,9 +340,10 @@ By the way: tracking the movement of ideas is very hard. If you think there are 
 
 ---
 
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph. 🦀
+ - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
  - Model the graph as data. 🛠
@@ -337,6 +360,13 @@ struct UnitDef {
 }
 
 ```
+
+```rust
+async fn start_graph(units: Vec<UnitDef>, name: String) -> ()
+```
+
+---
+
 ```rust
     let units = [
         UnitDef {
@@ -389,8 +419,9 @@ If we think about what that function should look like for slideshow
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    unit.dependencies.iter().for_each(|dep| {
-        unimplemented!("start dependency");
+    unit.dependencies
+	    .iter().for_each(|dep| {
+            unimplemented!("start dependency");
     });
     start(unit.name).await;
 }
@@ -490,11 +521,18 @@ async fn start_graph(units: Vec<UnitDef>, name: String) {
 Going back to our problem, we want to start all dependencies at the same time. 
 Let's build a collection of futures and iterate over them. We just need to figure out how to join a collection of futures, and we can do that with the `join_all` function.
 
+---
+class: center, middle
+# Concepts
+
+<img src="images/three-concepts-allocation.png" width="400">
+
 
 ---
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph. 🦀
+ - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
  - Model the graph as data. 🦀
@@ -509,7 +547,7 @@ Let's build a collection of futures and iterate over them. We just need to figur
 Have we actually?
 
 ---
-
+class: output
 # The output
 
 ```sh
@@ -564,12 +602,15 @@ async fn start_graph(units: Vec<UnitDef>, name: String) {
     start(unit.name).await;
 }
 ```
+---
 
 ```sh
-// 27 | async fn start_graph(units: Vec<UnitDef>, name: String) {
-// |                                                        ^ recursive `async fn`
+// 27 | async fn start_graph(units: Vec<UnitDef>, 
+//                 name: String) {
+// |             ^ recursive `async fn`
 // |
-// = note: a recursive `async fn` must be rewritten to return a boxed `dyn Future`
+// = note: a recursive `async fn` must be rewritten to
+//         return a boxed `dyn Future`
 // = note: consider using the `async_recursion` crate:
 //         https://crates.io/crates/async_recursion
 ```
@@ -592,7 +633,8 @@ async fn start_graph(units: Vec<UnitDef>, name: String) { }
 ```
 
 ```rust
-fn start_graph(units: Vec<UnitDef>, name: String) -> impl Future<...> { }
+fn start_graph(units: Vec<UnitDef>, 
+               name: String) -> impl Future<...> { }
 ```
 ???
 
@@ -628,15 +670,19 @@ In fact, we did, but join_all handles that for us.
 # Boxing
 
 ```rust
-fn start_graph(units: Vec<UnitDef>, name: String) -> impl Future<...> { }
+fn start_graph(units: Vec<UnitDef>, 
+               name: String) -> impl Future<...> { }
 ```
 
 ```rust
-fn start_graph(units: Vec<UnitDef>, name: String) -> Box<dyn Future<...>> { }
+fn start_graph(units: Vec<UnitDef>, 
+               name: String) -> Box<dyn Future<...>> { }
 ```
 
 ```rust
-fn start_graph(units: Vec<UnitDef>, name: String) -> Box<dyn Future<Output = ()>> {
+fn start_graph(units: Vec<UnitDef>, 
+               name: String
+			   ) -> Box<dyn Future<Output = ()>> {
     Box::new(async {
         let unit = find_unit(units, name);
         let deps = unit.dependencies
@@ -682,15 +728,19 @@ We do that through pinning. Pinning tells the compiler that the struct shouldn't
 
 ```rust
 fn start_graph(units: Vec<UnitDef>, 
-               name: String) -> Pin<Box<dyn Future<Output = ()>>> {
+               name: String
+			   ) -> Pin<Box<dyn Future<Output = ()>>> {
     Box::pin(async {
         let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter().map(|dep| start_graph(units, dep));
+        let deps = unit.dependencies.iter()
+		   .map(|dep| start_graph(units, dep));
         join_all(deps).await;
         start(unit.name).await;
     })
 }
 ```
+
+---
 
 # Async recursion
 
@@ -698,7 +748,8 @@ fn start_graph(units: Vec<UnitDef>,
 #[async_recursion]
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    let deps = unit.dependencies.iter().map(|dep| start_graph(units, dep));
+    let deps = unit.dependencies.iter()
+	  .map(|dep| start_graph(units, dep));
     join_all(deps).await;
     start(unit.name).await;
 }
@@ -710,6 +761,11 @@ We construct a pin of a box with `Box::pin`.
 
 But we could have also used this async recursion macro.
 
+---
+class: center, middle
+# Concepts
+
+<img src="images/three-concepts-box-pin.png" width="400">
 
 ---
 class: center, middle
@@ -721,9 +777,10 @@ class: center, middle
 Boxing and pinning is unique to Rust. It's its own view of memory management.
 
 ---
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph. 🦀
+ - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
  - Model the graph as data. 🦀
@@ -740,7 +797,7 @@ Boxing and pinning is unique to Rust. It's its own view of memory management.
 Or have we?
 
 ---
-
+class: output login-twice
 # The output
 
 ```sh
@@ -762,7 +819,9 @@ Running slideshow
 
 ```rust
 #[async_recursion]
-async fn start_graph(units: Vec<UnitDef>, state: &mut Vec<String>, name: String) {
+async fn start_graph(units: Vec<UnitDef>, 
+    state: &mut Vec<String>,
+	name: String) {
     if !state.contains(&name) {
         let unit = find_unit(units, name);
         let deps = unit
@@ -777,7 +836,8 @@ async fn start_graph(units: Vec<UnitDef>, state: &mut Vec<String>, name: String)
 ```
 
 ```sh
-// error: captured variable cannot escape `FnMut` closure body
+// error: captured variable cannot escape `FnMut` closure
+//    |   body
 //    |         inferred to be a `FnMut` closure
 ```
 
@@ -855,7 +915,8 @@ async fn start_graph(units: Vec<UnitDef>,
 
     if !state.contains(&name) {
 	    let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter().map(|dep| start_graph(units, dep));
+        let deps = unit.dependencies.iter()
+		  .map(|dep| start_graph(units, dep));
         join_all(deps).await;
         start(unit.name).await;
         state.push(name);
@@ -928,9 +989,16 @@ async fn start_graph(units: Vec<UnitDef>,
 There's a really easy solution for this, but I want to make sure we explore both camps.
 
 ---
+class: center, middle
+# Concepts
+
+<img src="images/three-concepts-arc-mutex.png" width="400">
+
+---
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph. 🦀
+ - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
  - Model the graph as data. 🦀
@@ -1039,7 +1107,7 @@ I've used the term ask here, which is a bit dangerous in actor systems.
 # Orchestrator
 
 ```rust
-async fn orchestrator(mut inbox: futures::channel::mpsc::Receiver<Message>) {
+async fn orchestrator(mut inbox: mpsc::Receiver<Message>) {
     let mut started_units = Vec::new();
     while let Some(Message { name }) = inbox.next().await {
         if started_units.contains(&name) {
@@ -1097,12 +1165,14 @@ enum Message {
     unit_addr: oneshot::Sender<bool>,
 }
 ```
+---
 
 ```rust
 #[async_recursion]
-async fn start_graph(units: Vec<UnitDef>, 
-                     mut orchestrator_addr: mpsc::Sender<Message>,
-					 name: String) {
+async fn start_graph(
+  units: Vec<UnitDef>, 
+  mut orchestrator_addr: mpsc::Sender<Message>,
+  name: String) {
     let (unit_addr, unit_inbox) = oneshot::channel::<bool>();
     orchestrator_addr
         .send(Message {
@@ -1113,7 +1183,10 @@ async fn start_graph(units: Vec<UnitDef>,
 
     if unit_inbox.await {
         let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter().map(|dep| start_graph(units, dep));
+        let deps = unit.dependencies.iter()
+		  .map(|dep| start_graph(units, 
+		                         orchestrator_addr, 
+								 dep));
         join_all(deps).await;
         start(unit.name).await;
     }
@@ -1125,7 +1198,8 @@ async fn start_graph(units: Vec<UnitDef>,
 ```rust
 async fn orchestrator(mut inbox: mpsc::Receiver<Message>) {
     let mut started_units = Vec::new();
-    while let Some(Message { name, unit_addr }) = inbox.next().await {
+    while let Some(Message { name, unit_addr }) = 
+	  inbox.next().await {
         if started_units.contains(name) {
             unit_addr.send(false).await;
         } else {
@@ -1145,14 +1219,24 @@ TODO: We don't need an enum
 ```rust
 fn main() {
     let units = vec![...];
-    let (orchestrator_addr, orchestrator_inbox) = mpsc::channel(bound);
+    let (orchestrator_addr, 
+	     orchestrator_inbox) = mpsc::channel(bound);
     let orchestrator = orchestrator(orchestrator_inbox);
-    join!(orchestrator, start_graph(units, orchestrator_addr, "slideshow"))
+    join!(orchestrator, start_graph(units, 
+	                                orchestrator_addr, 
+									"slideshow"))
 }
 ```
 ---
 class: center, middle
 <img src="images/graph_channels.png" width="600">
+
+---
+class: center, middle
+# Concepts
+
+<img src="images/three-concepts-arc-mutex.png" width="400">
+
 ---
 
 class: center, middle
@@ -1164,9 +1248,10 @@ class: center, middle
 Channels come from Go.
 
 ---
+class: aim-start-a-graph
 # Aim: Start a graph of units
 
- - Start a hardcoded graph. 🦀
+ - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
  - Model the graph as data. 🦀
@@ -1185,8 +1270,8 @@ Channels come from Go.
    
 ???
 ---
-
-# The Output
+class: output
+# The output 🎉
 
 ```sh
 Starting login
@@ -1234,11 +1319,17 @@ class: middle
 
 class: middle
 # Places to go
- - https://without.boats/blog/
  - https://rust-lang.github.io/async-book/
  - https://github.com/async-rs/
+ - https://tokio.rs/
+ - https://without.boats/blog/
 
 ---
-class: middle
+class: center, middle
 
 # Thank you!
+
+- linkedin: zainab-ali-fp
+- zainab@pureasync.com
+
+https://zainab-ali.github.io/reasoning-with-async-rust

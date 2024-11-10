@@ -1,0 +1,25 @@
+div.output code {
+    font-size: 36px;
+}
+
+div.async-rust li,
+div.aim-start-a-graph li {
+    /* This could be bigger, but we need to find another way to write the summary. */
+    font-size: 24px;
+}
+
+div.concurrency-join code.bash div:nth-child(3),
+div.concurrency-join code.bash div:nth-child(4),
+div.login-twice code.bash div:nth-child(1),
+div.login-twice code.bash div:nth-child(2) {
+    background-color: #ffbf00;
+}
+
+#what-is-async- code {
+    font-size: 46px;
+}
+
+div.join p {
+    display: flex;
+    justify-content: center;
+}
