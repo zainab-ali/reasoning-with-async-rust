@@ -8,14 +8,14 @@ https://zainab-ali.github.io/reasoning-with-async-rust
 
 ???
 
-When we write Rust, particularly Async Rust, we get bogged down by details.
+ - When writing Async Rust, we get bogged down by details
+   - New syntax
+   - Confusing error messages
+   - Confusing types
+   - We can forget about the actual problems we're solving.
 
-There's a lot of new syntax to pay attention to.
-And when we get into the weeds of writing code,
-we encounter confusing error messages,
-and solving problems,
-we can sometimes forget about the problems we're solving.
-
+TODO: My intro
+TODO: Relevance of async rust
 In this talk, I want to present a high level, mental picture about what Async Rust is and how we can think about problems with it.
 
 I'm Zainab, I'm a functional programmer and trainer, and I'm particularly interested in how we think about concurrency.
@@ -27,13 +27,12 @@ class: center, middle
 
 ???
 
-The aim of async Rust is to describe programs where things happen "at the same time".
+The aim of async programming is to describe programs where things happen "at the same time".
+ - webserver serves many requests
+ - read from a file or DB
+ - game engine: rendering at the same time as receiving user input
 
-Most code we write is sequential. But sometimes it's not. 
-
-For instance, when writing a webservice you want to serve many requests "at the same time". And also read from a file or write to a database.
-
-If you're writing a game engine, you're rendering at the same time as receiving user input.
+TODO: not mentioned errors, one machine or several, or whether it matters
 
 ---
 class: center, middle
@@ -62,7 +61,10 @@ class: center, middle
 
 ???
 
-You can think each language as each having their own unique terrain that shapes it; it's own constraints and features. Some of them have runtimes, garbage collection, and pay a price for that.
+You can think each language as each having their own unique terrain that shapes it; it's own constraints and features.
+ - Runtimes
+ - Garbage collection
+ - Type system
 
 Each language has its own ideas on how to tackle concurrency, and the wonderful thing about ideas is that they migrate. In forming async Rust, ideas migrated from many different places.
 
@@ -74,17 +76,21 @@ If you come from Scala or Go, you probably find things familiar, but wonder why 
 
 We're going to learn about Async Rust. Along the way, we'll learn a bit about the flavours of concurrency in other langauges and see how they shaped it.
 
-But first, we need a problem to solve.
+ - When we learn a new concept, we're going to pin it to this map.
 
 TIME: 3 minutes
-
-NOTE: Miss out paradigms are another axis, Each language has differnt constraints, whether it has a runtime or not, how it's memory management is done, what it's type system is suited for.
 
 ---
 class: center, middle
 # Concepts
 <img src="images/three-concepts.png" width="400">
 
+???
+
+ - Teach Rust better: simple concepts
+ - We're going to be ambitious and boil it down into three
+ - We need a concurrency problem to solve.
+ 
 ---
 class: center, middle
 
@@ -102,15 +108,11 @@ As an example. Let's use the tasks required for me to give this slideshow.
  - Finally I need to present my slideshow.
 
 Because the word "task" is taken, I'm going to call these things units.
-
-We'll see how they relate to async along the way.
-
 The most interesting units here are browser and my webserver. I want to start these concurrently.
 
+TODO: Do we talk about what concurrency means?
 By concurrently, I mean independently.
 Concurrency implies independence.
-
-NOTE: We want to define dependencies, we don't really govern execution.
 
 ---
 class: aim-start-a-graph
@@ -125,9 +127,8 @@ We're going to model a fixed set of units - we're going to hardcode the graph I'
 
 We're then going to model a general graph.
 
-Finally, we share state, and how not to.
-
-All the while, we're going to pay attention to our view of concurrency.
+ - When we encounter a new concept, we're going to look at where it comes from. 
+ - We're going to add it to our set of concepts.
 
 ---
 ## Basic Rust
@@ -176,9 +177,9 @@ Running slideshow
 
 ???
 
-If we run this, we get this output. Note that it's sequential, if I were to demo this, you'd see that there was a one second delay between the starting and the started.
-
-
+If we run this, we get this output.
+ - Note that it's sequential, 
+ - if I were to demo this, you'd see that there was a one second delay between the starting and the started.
 
 ---
 
@@ -206,17 +207,14 @@ async fn start(name: String) {
 
 ???
 
-That's the sequential code. What about async?
-
-The code looks very similar.
-
-The biggest thing we've done is introduced this async keyword before main and start.
-
-We've also written this extra await after each call to start.
-
-And we've replaced our sleep with Delay, from futures_timer.
+ - What about async? The code looks very similar.
+ - The biggest thing we've done is introduced this async keyword before main and start.
+ - We've also written this extra await after each call to start.
+ - And we've replaced our sleep with Delay, from futures_timer.
 
 And we have this async_std main macro. Which we're going to ignore for the moment.
+
+TODO: should we remove the macro?
 
 ---
 class: output
@@ -247,8 +245,9 @@ class: center, middle
 <img src="images/await-sequential-composition.png" width="600">
 
 ???
-You can think of the async keyword as introducing the idea of units of work.
-await as defining a sequential dependency between these units.
+
+ - You can think of the async keyword as introducing the idea of units of work.
+ - await as composing these units a sequential dependency between these units.
 
 ---
 class: join
@@ -279,7 +278,7 @@ If we join these two units, they can happen in any order.
 ---
 class: concurrency-join
 
-# Concurrency
+# join!
 
 ```rust
 async fn main() {
@@ -316,7 +315,7 @@ class: center, middle
 
 TIME: 4 minutes
 
-NOTE: Not talked about how they are run.
+NOTE: Not talked about how they are run. Maybe we should?
 
 ---
 class: center, middle
@@ -330,7 +329,7 @@ You might think these look rather alien, or maybe they're familiar to you.
 That's because they came from elsewhere.
 
 async / await probably came from javascript.
-join came from Scala.
+join came from Scala (Twitter futures).
 
 By the way: tracking the movement of ideas is very hard. If you think there are other languages, or if things came differently. I'll very happily accept corrections.
 
@@ -357,6 +356,11 @@ struct UnitDef {
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) -> ()
 ```
+
+???
+
+We're now going to start an arbitrary graph
+By modeiling our graph as data
 
 ---
 
@@ -387,15 +391,7 @@ start_graph(units, "slideshow").await;
 
 ???
 
-So far we've defined a fixed graph.
-But it would be nice to be able to describe an arbitrary graph, provided it was valid.
-
-I'm going to do this by describing my graph as a data structure. 
-
-I'll create this UnitDef struct to represent a unit definition.
-And a graph is just a vector of unit definitions.
-
-Finally, I'm going to have a function start_graph that starts a unit and all its dependencies.
+ - Let's describe the slideshow graph.
 
 ---
 class: center, middle
@@ -404,7 +400,7 @@ class: center, middle
 
 ???
 
-If we think about what that function should look like for slideshow
+Think about what that function should look like for slideshow
 ---
 
 # Arbitrary graph
@@ -449,7 +445,7 @@ So far we've seen the syntax and seen how it can express dependecies.
 But I haven't gone into any detail about how it's done.  Ignoring the how makes it easy to first grasp, but without that understanding it becomes difficult to compose units in more complex ways.
 
 And to those of you familiar with the ways of Rust, you might feel a bit betrayed by that. 
-I've sort of waved my magic wand and said that async just happens, but Rust has very little by way of sorcery.
+I've waved my magic wand and said that async just happens, but Rust has very little by way of sorcery.
 
 So let's remove some of the mystery and have a look at the async / await keywords in a bit more depth.
 
@@ -475,21 +471,16 @@ fn start(name: String) -> impl Future<Output = ()> {
 
 ???
 
-This is our async start function. It prints, delays and prints again.
-
-Let's remove the async / await keywords and use std Rust instead.
-
-We can replace async / await with something called a future.
-
-Instead of our start function being async, we're returning this impl Future.
-
-It's first created by this call to `ready`. And instead of `async`, we're using `then`.
+ - This is our async start function. It prints, delays and prints again.
+ - Let's remove the async / await keywords and use std Rust instead.
+ - We can replace async / await with something called a future.
+ - Instead of our start function being async, we're returning this impl Future.
+ - It's first created by this call to `lazy`. And instead of `async`, we're using `then`.
 
 So this is a bit more verbose, but it should demystify a few things.
-
-Future is a trait, and we're returning an implementation of this trait. An impl means the compiler knows exactly what this is, we're asking the compiler to come up with a name for it.
-
-The type Output is what the future returns, in our case unit.
+ - Future is a trait, and we're returning an implementation of this trait. 
+ - An impl means the compiler knows exactly what this is, we're asking the compiler to come up with a name for it.
+ - The type Output is what the future returns, in our case unit.
 
 So that makes things a bit less abstract. These units we're constructing are implementations of future. They're structs and hence data.
 
@@ -795,6 +786,10 @@ Starting slideshow
 Running slideshow
 ```
 
+???
+
+ - We need to keep track of whether or not we've logged in
+
 ---
 
 # Mutable state
@@ -818,6 +813,10 @@ async fn start_graph(units: Vec<UnitDef>,
     }
 }
 ```
+
+???
+ - Let's just try and use mutable state. Maybe the compiler will help us.
+
 ---
 
 ```sh
@@ -951,8 +950,9 @@ class: center, middle
 <img src="images/graph_mutex_lock_deadlock.png" width="600">
 
 ???
-It becomes obvious what the problem is.
 
+ - We lock multiple times
+ 
 ---
 
 ```rust
@@ -964,8 +964,8 @@ async fn start_graph(
 
     if !started_units.contains(&name) {
     	started_units.push(name);
-	    drop(started_units);
-		...
+	    drop(started_units); // <- unlock
+		... 
     }
 }
 ```
