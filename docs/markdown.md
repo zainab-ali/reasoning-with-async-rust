@@ -244,7 +244,7 @@ Aside from making our code more verbose, what have we actually done?
 
 ---
 class: center, middle
-<img src="images/sequential-steps.png" width="200">
+<img src="images/await-sequential-composition.png" width="600">
 
 ???
 You can think of the async keyword as introducing the idea of units of work.
@@ -342,8 +342,7 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Start an arbitrary graph.
-   - Model the graph as data. 🛠
+ - Start an arbitrary graph. 🛠
 
 ---
 
@@ -439,7 +438,7 @@ We can try and use await, our compiler is unhappy and besides this isn't what we
 ---
 class: center, middle
 
-# What is `async`?
+# What is `async fn`?
 
 ???
 
@@ -675,10 +674,7 @@ fn start_graph(units: Vec<UnitDef>,
                name: String
 			   ) -> Box<dyn Future<Output = ()>> {
     Box::new(async {
-        let unit = find_unit(units, name);
-        let start_deps = unit.dependencies
-            .iter()
-            .map(|dep| start_graph(units, dep));
+	    ...
         join_all(start_deps).await;
         start(unit.name).await;
     })
@@ -722,9 +718,7 @@ fn start_graph(units: Vec<UnitDef>,
                name: String
 			   ) -> Pin<Box<dyn Future<Output = ()>>> {
     Box::pin(async {
-        let unit = find_unit(units, name);
-        let start_deps = unit.dependencies.iter()
-		   .map(|dep| start_graph(units, dep));
+	    ...
         join_all(start_deps).await;
         start(unit.name).await;
     })
@@ -899,16 +893,14 @@ Instead of tracking our references at compile time with the borrow checker, we'r
 # Shared state
 
 ```rust
-async fn start_graph(units: Vec<UnitDef>, 
-                     mut_started_units: Arc<Mutex<Vec<String>>>, 
-					 name: String) {
+async fn start_graph(
+   units: Vec<UnitDef>, 
+   mut_started_units: Arc<Mutex<Vec<String>>>, 
+   name: String) {
     let mut started_units = mut_started_units.lock().await;
 
     if !started_units.contains(&name) {
-	    let unit = find_unit(units, name);
-        let start_deps = unit.dependencies.iter()
-		  .map(|dep| start_graph(units, dep));
-        join_all(start_deps).await;
+	    ...
         start(unit.name).await;
         started_units.push(name);
     }
@@ -927,9 +919,10 @@ async fn start_graph(units: Vec<UnitDef>,
 # Shared state
 
 ```rust
-async fn start_graph(units: Vec<UnitDef>, 
-                     mut_started_units: Arc<Mutex<Vec<String>>>, 
-					 name: String) {
+async fn start_graph(
+   units: Vec<UnitDef>, 
+   mut_started_units: Arc<Mutex<Vec<String>>>, 
+   name: String) {
     println!("About to acquire lock for {}", name);
     let mut started_units = mut_started_units.lock().await;
     println!("Acquired lock for {}", name);
@@ -963,9 +956,10 @@ It becomes obvious what the problem is.
 ---
 
 ```rust
-async fn start_graph(units: Vec<UnitDef>, 
-                    mut_started_units: Arc<Mutex<Vec<String>>>, 
-					name: String) {
+async fn start_graph(
+   units: Vec<UnitDef>, 
+   mut_started_units: Arc<Mutex<Vec<String>>>, 
+   name: String) {
     let mut started_units = mut_started_units.lock().await;
 
     if !started_units.contains(&name) {
