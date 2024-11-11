@@ -46,10 +46,10 @@ This is known as the problem of concurrency. It's not new by any means, and nor 
 
 In fact, each language ends up needing to do this, and they each do it differently:
  - C works with threads (OS level)
- - Go foregoes an OS entirely and has goroutines
+ - Go has goroutines
  - Erlang has actors
  - JS ecosystem has futures and promises.
- - Scala has effect systems
+ - Scala / FP has effect systems
 
 You may well wonder - why?
 
@@ -118,10 +118,6 @@ class: aim-start-a-graph
 
  - Start the slideshow graph.
  - Start an arbitrary graph.
- - Model the graph as data.
- - View units of work as data.
- - How to share state.
- - How not to share state.
 
 ???
 
@@ -346,10 +342,8 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Model the graph as data. 🛠
- - View units of work as data.
- - How to share state.
- - How not to share state.
+ - Start an arbitrary graph.
+   - Model the graph as data. 🛠
 
 ---
 
@@ -508,10 +502,10 @@ We can manipulate them as such.
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    let deps = unit.dependencies.iter().map(|dep| {
+    let start_deps = unit.dependencies.iter().map(|dep| {
 	    start(dep)
     });
-	join_all(deps).await;
+	join_all(start_deps).await;
     start(unit.name).await;
 }
 ```
@@ -535,12 +529,9 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Model the graph as data. 🦀
+ - Start an arbitrary graph. 🦀
    - Units are implementations of future.
    - Futures are datastructures.
- - View units of work as data. 🛠
- - How to share state.
- - How not to share state.
 
 ???
 
@@ -574,10 +565,10 @@ I didn't miss it out in my list of units
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    let deps = unit.dependencies.iter().map(|dep| {
+    let start_deps = unit.dependencies.iter().map(|dep| {
 	    start(dep) // <- start their dependencies too
     });
-	join_all(deps).await;
+	join_all(start_deps).await;
     start(unit.name).await;
 }
 ```
@@ -595,10 +586,10 @@ There's an easy way to do that.
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    let deps = unit.dependencies.iter().map(|dep| {
+    let start_deps = unit.dependencies.iter().map(|dep| {
 	    start_graph(units, dep)
     });
-	join_all(deps).await;
+	join_all(start_deps).await;
     start(unit.name).await;
 }
 ```
@@ -685,10 +676,10 @@ fn start_graph(units: Vec<UnitDef>,
 			   ) -> Box<dyn Future<Output = ()>> {
     Box::new(async {
         let unit = find_unit(units, name);
-        let deps = unit.dependencies
+        let start_deps = unit.dependencies
             .iter()
             .map(|dep| start_graph(units, dep));
-        join_all(deps).await;
+        join_all(start_deps).await;
         start(unit.name).await;
     })
 }
@@ -732,9 +723,9 @@ fn start_graph(units: Vec<UnitDef>,
 			   ) -> Pin<Box<dyn Future<Output = ()>>> {
     Box::pin(async {
         let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter()
+        let start_deps = unit.dependencies.iter()
 		   .map(|dep| start_graph(units, dep));
-        join_all(deps).await;
+        join_all(start_deps).await;
         start(unit.name).await;
     })
 }
@@ -748,9 +739,9 @@ fn start_graph(units: Vec<UnitDef>,
 #[async_recursion]
 async fn start_graph(units: Vec<UnitDef>, name: String) {
     let unit = find_unit(units, name);
-    let deps = unit.dependencies.iter()
+    let start_deps = unit.dependencies.iter()
 	  .map(|dep| start_graph(units, dep));
-    join_all(deps).await;
+    join_all(start_deps).await;
     start(unit.name).await;
 }
 ```
@@ -783,14 +774,11 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Model the graph as data. 🦀
+ - Start an arbitrary graph. 🦀
    - Units are implementations of future.
    - Futures are datastructures.
- - View units of work as data. 🦀
    - `Box` to put them on the heap.
    - `Pin` to prevent them moving in memory.
- - How to share state. 🛠
- - How not to share state.
 
 ???
 
@@ -820,20 +808,23 @@ Running slideshow
 ```rust
 #[async_recursion]
 async fn start_graph(units: Vec<UnitDef>, 
-    state: &mut Vec<String>,
+    started_units: &mut Vec<String>,
 	name: String) {
-    if !state.contains(&name) {
+    if !started_units.contains(&name) {
         let unit = find_unit(units, name);
-        let deps = unit
+        let start_deps = unit
             .dependencies
 			.iter()
-            .map(|dep| start_graph(units, state, dep));
-        join_all(deps).await;
+            .map(|dep| start_graph(units, 
+			                       started_units,
+								   dep));
+        join_all(start_deps).await;
         start(unit.name).await;
-        state.push(name);
+        started_units.push(name);
     }
 }
 ```
+---
 
 ```sh
 // error: captured variable cannot escape `FnMut` closure
@@ -909,17 +900,17 @@ Instead of tracking our references at compile time with the borrow checker, we'r
 
 ```rust
 async fn start_graph(units: Vec<UnitDef>, 
-                     mut_state: Arc<Mutex<Vec<String>>>, 
+                     mut_started_units: Arc<Mutex<Vec<String>>>, 
 					 name: String) {
-    let mut state = mut_state.lock().await;
+    let mut started_units = mut_started_units.lock().await;
 
-    if !state.contains(&name) {
+    if !started_units.contains(&name) {
 	    let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter()
+        let start_deps = unit.dependencies.iter()
 		  .map(|dep| start_graph(units, dep));
-        join_all(deps).await;
+        join_all(start_deps).await;
         start(unit.name).await;
-        state.push(name);
+        started_units.push(name);
     }
 }
 ```
@@ -937,10 +928,10 @@ async fn start_graph(units: Vec<UnitDef>,
 
 ```rust
 async fn start_graph(units: Vec<UnitDef>, 
-                     mut_state: Arc<Mutex<Vec<String>>>, 
+                     mut_started_units: Arc<Mutex<Vec<String>>>, 
 					 name: String) {
     println!("About to acquire lock for {}", name);
-    let mut state = mut_state.lock().await;
+    let mut started_units = mut_started_units.lock().await;
     println!("Acquired lock for {}", name);
     ...
 }
@@ -973,13 +964,13 @@ It becomes obvious what the problem is.
 
 ```rust
 async fn start_graph(units: Vec<UnitDef>, 
-                    mut_state: Arc<Mutex<Vec<String>>>, 
+                    mut_started_units: Arc<Mutex<Vec<String>>>, 
 					name: String) {
-    let mut state = mut_state.lock().await;
+    let mut started_units = mut_started_units.lock().await;
 
-    if !state.contains(&name) {
-    	state.push(name);
-	    drop(state);
+    if !started_units.contains(&name) {
+    	started_units.push(name);
+	    drop(started_units);
 		...
     }
 }
@@ -1001,17 +992,14 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Model the graph as data. 🦀
+ - Start an arbitrary graph. 🦀
    - Units are implementations of future.
    - Futures are datastructures.
- - View units of work as data. 🦀
    - `Box` to put them on the heap.
    - `Pin` to prevent them moving in memory.
- - How to share state. 🦀
    - `Mutex` to lock state.
    - `Arc` to count references at runtime.
    - Beware of deadlocks.
- - How not to share state. 🛠 
 
 ---
 
@@ -1183,11 +1171,11 @@ async fn start_graph(
 
     if unit_inbox.await {
         let unit = find_unit(units, name);
-        let deps = unit.dependencies.iter()
+        let start_deps = unit.dependencies.iter()
 		  .map(|dep| start_graph(units, 
 		                         orchestrator_addr, 
 								 dep));
-        join_all(deps).await;
+        join_all(start_deps).await;
         start(unit.name).await;
     }
 }
@@ -1254,17 +1242,14 @@ class: aim-start-a-graph
  - Start the slideshow graph. 🦀
    - Use `async`, `await` and `join`.
    - Compose units of work.
- - Model the graph as data. 🦀
+ - Start an arbitrary graph. 🦀
    - Units are implementations of future.
    - Futures are datastructures.
- - View units of work as data. 🦀
    - `Box` to put them on the heap.
    - `Pin` to prevent them moving in memory.
- - How to share state. 🦀
    - `Mutex` to lock state.
    - `Arc` to count references at runtime.
    - Beware of deadlocks.
- - How not to share state. 🦀
    - Message passing with channels.
    - Looping futures as actors.
    
@@ -1325,11 +1310,11 @@ class: middle
  - https://without.boats/blog/
 
 ---
-class: center, middle
+class:  middle
 
 # Thank you!
 
-- linkedin: zainab-ali-fp
+- LinkedIn: zainab-ali-fp
 - zainab@pureasync.com
 
 https://zainab-ali.github.io/reasoning-with-async-rust
