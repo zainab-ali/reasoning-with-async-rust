@@ -19,11 +19,22 @@ TODO: Relevance of async rust
 In this talk, I want to present a high level, mental picture about what Async Rust is and how we can think about problems with it.
 
 I'm Zainab, I'm a functional programmer and trainer, and I'm particularly interested in how we think about concurrency.
+---
+
+class: center, middle
+
+<img src="images/languages.png" width="800">
+
+---
+
+class: center, middle
+
+<img src="images/thoughts.png" width="400">
 
 ---
 class: center, middle
 
-# Why async?
+# Concurrency
 
 ???
 
@@ -34,13 +45,14 @@ The aim of async programming is to describe programs where things happen "at the
 
 TODO: not mentioned errors, one machine or several, or whether it matters
 
+???
+
 ---
 class: center, middle
 
-# Concurrency
+<img src="images/map_languages.png" width="600">
 
 ???
-
 This is known as the problem of concurrency. It's not new by any means, and nor is it unique to Rust.
 
 In fact, each language ends up needing to do this, and they each do it differently:
@@ -53,13 +65,6 @@ In fact, each language ends up needing to do this, and they each do it different
 You may well wonder - why?
 
 Why are there so many different solutions to the same problem?
-
----
-class: center, middle
-
-<img src="images/map_languages.png" width="600">
-
-???
 
 You can think each language as each having their own unique terrain that shapes it; it's own constraints and features.
  - Runtimes
@@ -188,7 +193,6 @@ class: async
 # Async
 
 ```rust
-#[async_std::main]
 async fn main() {
     start("login").await;
     start("browser").await;
@@ -212,7 +216,7 @@ async fn start(name: String) {
  - We've also written this extra await after each call to start.
  - And we've replaced our sleep with Delay, from futures_timer.
 
-And we have this async_std main macro. Which we're going to ignore for the moment.
+ - There are a few more moving pieces.
 
 TODO: should we remove the macro?
 
