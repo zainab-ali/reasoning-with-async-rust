@@ -313,7 +313,7 @@ If you look at the output now, we start both the browser and webserver at the sa
 class: center, middle
 # Concepts
 
-<img src="images/three-concepts-composition.png" width="400">
+<img src="images/three-concepts-composition.png" width="600">
 
 ???
 
@@ -513,7 +513,7 @@ Let's build a collection of futures and iterate over them. We just need to figur
 class: center, middle
 # Concepts
 
-<img src="images/three-concepts-allocation.png" width="400">
+<img src="images/three-concepts-allocation.png" width="600">
 
 
 ---
@@ -574,8 +574,7 @@ We're not starting the dependencies of our dependencies.
 There's an easy way to do that.
 
 ---
-
-# Recursion
+# Dependencies of dependencies
 
 ```rust
 async fn start_graph(units: Vec<UnitDef>, name: String) {
@@ -745,7 +744,7 @@ But we could have also used this async recursion macro.
 class: center, middle
 # Concepts
 
-<img src="images/three-concepts-box-pin.png" width="400">
+<img src="images/three-concepts-box-pin.png" width="600">
 
 ---
 class: center, middle
@@ -981,7 +980,7 @@ There's a really easy solution for this, but I want to make sure we explore both
 class: center, middle
 # Concepts
 
-<img src="images/three-concepts-arc-mutex.png" width="400">
+<img src="images/three-concepts-arc-mutex.png" width="600">
 
 ---
 class: aim-start-a-graph
@@ -1221,7 +1220,7 @@ class: center, middle
 class: center, middle
 # Concepts
 
-<img src="images/three-concepts-arc-mutex.png" width="400">
+<img src="images/three-concepts-arc-mutex.png" width="600">
 
 ---
 
@@ -1273,6 +1272,7 @@ class: center, middle
 <img src="images/map_languages.png" width="600">
 
 ???
+
 We've had a whirlwind tour of async Rust.
  
  - We've looked at async / await syntax, futures, channels and shared state,
@@ -1288,23 +1288,29 @@ We've had a whirlwind tour of async Rust.
    - select / race.
  - We haven't explored the land of OS threads at all.
 
-???
 ---
-class: middle
+class: center, middle
+# Concepts
 
-# Async Rust
+<img src="images/three-concepts-final.png" width="600">
 
- - Concurrency is a challenge
- - Async programming borrows from many languages
- - Shared mutable state is difficult
+???
 
+We didn't talk about:
+ - runtimes: execution environments
+ - green threads
+ - error handling cancellation
+ - iteration
+
+ - message passing
+ - reasoning
 ---
 
 class: middle
 # Places to go
  - https://rust-lang.github.io/async-book/
- - https://github.com/async-rs/
  - https://tokio.rs/
+ - https://github.com/async-rs/
  - https://without.boats/blog/
 
 ---
@@ -1316,3 +1322,9 @@ class:  middle
 - zainab@pureasync.com
 
 https://zainab-ali.github.io/reasoning-with-async-rust
+
+???
+
+ - Share ideas
+ - Learning functional programming
+ -

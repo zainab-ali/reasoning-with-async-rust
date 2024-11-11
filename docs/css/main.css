@@ -23,3 +23,7 @@ div.join p {
     display: flex;
     justify-content: center;
 }
+
+a:visited {
+    color: blue;
+}
